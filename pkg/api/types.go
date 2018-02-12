@@ -266,10 +266,23 @@ type KubernetesConfig struct {
 	CtrlMgrRouteReconciliationPeriod string            `json:"ctrlMgrRouteReconciliationPeriod,omitempty"`
 }
 
+// BootstrapNodeProfile represents the definition of the bootstrap service cluster
+type BootstrapNodeProfile struct {
+	Count                    int               `json:"count"`
+	VMSize                   string            `json:"vmSize"`
+	OSDiskSizeGB             int               `json:"osDiskSizeGB,omitempty"`
+	OAuthEnabled             bool              `json:"oauthEnabled"`
+	PreprovisionExtension    *Extension        `json:"preProvisionExtension"`
+	FirstConsecutiveStaticIP string            `json:"firstConsecutiveStaticIP,omitempty"`
+	Subnet                   string            `json:"subnet"`
+	StorageProfile           string            `json:"storageProfile,omitempty"`
+}
+
 // DcosConfig Configuration for DC/OS
 type DcosConfig struct {
 	DcosBootstrapURL        string `json:"dcosBootstrapURL,omitempty"`
 	DcosWindowsBootstrapURL string `json:"dcosWindowsBootstrapURL,omitempty"`
+    BootstrapNodeProfile    *BootstrapNodeProfile`json:"bootstrapNodeProfile"`
 }
 
 // MasterProfile represents the definition of the master cluster
