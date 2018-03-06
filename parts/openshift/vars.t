@@ -1,8 +1,7 @@
-    {{/* TODO: should be gituser: openshift, branch: master - changed to disable instance memory size checks */}}
-    "gituser" : "jim-minter",
-    "branch" : "azurefixes",
+    "gituser" : "kargakis",
+    "branch" : "master",
     "version" : "3.7",
-    "baseTemplateUrl" : "[concat('https://raw.githubusercontent.com/',variables('gituser'),'/openshift-ansible-contrib/',variables('branch'),'/reference-architecture/azure-ansible/',variables('version'),'/')]",
+    "baseTemplateUrl" : "[concat('https://raw.githubusercontent.com/',variables('gituser'),'/acs-engine/',variables('branch'),'/parts/openshift/',variables('version'),'/')]",
     "baseVMachineTemplateUriInfranode" : "[concat(variables('baseTemplateUrl'), 'infranode.json')]",
     "baseVMachineTemplateUriNode" : "[concat(variables('baseTemplateUrl'), 'node.json')]",
     "baseVMachineTemplateUriMaster" : "[concat(variables('baseTemplateUrl'), 'master.json')]",

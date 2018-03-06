@@ -26,8 +26,8 @@
     },
     "numberOfNodes" : {
       "type" : "int",
-      "defaultValue" : 3,
-      "minValue" : 3,
+      "defaultValue" : 1,
+      "minValue" : 1,
       "maxValue" : 30,
       "metadata" : {
         "description" : "Number of OpenShift Nodes to deploy (max 30)"

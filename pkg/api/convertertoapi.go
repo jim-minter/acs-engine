@@ -665,7 +665,7 @@ func setVlabsOpenShiftDefaults(vp *vlabs.Properties, api *OrchestratorProfile) {
 		api.OpenShiftConfig = &OpenShiftConfig{}
 	}
 	if api.OpenShiftConfig.NumberOfNodes == 0 {
-		api.OpenShiftConfig.NumberOfNodes = 3
+		api.OpenShiftConfig.NumberOfNodes = 1
 	}
 	if api.OpenShiftConfig.Image == "" {
 		api.OpenShiftConfig.Image = "rhel"
@@ -685,13 +685,16 @@ func setVlabsOpenShiftDefaults(vp *vlabs.Properties, api *OrchestratorProfile) {
 	if api.OpenShiftConfig.OpenShiftSDN == "" {
 		api.OpenShiftConfig.OpenShiftSDN = "redhat/openshift-ovs-multitenant"
 	}
-	t := true
+	t, f := true, false
 
 	if api.OpenShiftConfig.Metrics == nil {
 		api.OpenShiftConfig.Metrics = &t
 	}
 	if api.OpenShiftConfig.Logging == nil {
 		api.OpenShiftConfig.Logging = &t
+	}
+	if api.OpenShiftConfig.OpsLogging == nil {
+		api.OpenShiftConfig.OpsLogging = &f
 	}
 }
 
