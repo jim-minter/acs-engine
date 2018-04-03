@@ -12,7 +12,7 @@
       "imageName": "YOUR IMAGE",
       "imageResourceGroup": "YOUR IMAGE RESOURCE GROUP",
       "storageProfile": "ManagedDisks",
-      "vmSize": "Standard_D4s_v3",
+      "vmSize": "Standard_D4s_v3"
     },
     "agentPoolProfiles": [
       {
@@ -22,7 +22,7 @@
         "imageResourceGroup": "YOUR IMAGE RESOURCE GROUP",
         "name": "compute",
         "storageProfile": "ManagedDisks",
-        "vmSize": "Standard_D4s_v3",
+        "vmSize": "Standard_D4s_v3"
       },
       {
         "availabilityProfile": "AvailabilitySet",
@@ -32,7 +32,7 @@
         "isOpenShiftInfra": true,
         "name": "infra",
         "storageProfile": "ManagedDisks",
-        "vmSize": "Standard_D4s_v3",
+        "vmSize": "Standard_D4s_v3"
       }
     ],
     "linuxProfile": {
