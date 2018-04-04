@@ -168,7 +168,7 @@ oc adm policy add-scc-to-user hostmount-anyuid system:serviceaccount:kube-servic
 oc adm policy add-cluster-role-to-user admin system:serviceaccount:kube-service-catalog:default
 oc process -f /tmp/service-catalog/objects.yaml \
   -p CA_HASH="$(base64 -w0 </etc/origin/service-catalog/ca.crt | sha1sum | cut -d' ' -f1)" \
-  -p ETCD_SERVER="$(hostname --fqdn)" \
+  -p ETCD_SERVER="$(hostname)" \
   | oc create -f -
 oc rollout status -n kube-service-catalog daemonset apiserver
 
