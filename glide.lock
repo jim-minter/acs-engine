@@ -165,8 +165,6 @@ imports:
 - name: golang.org/x/crypto
   version: 122d919ec1efcfb58483215da23f815853e24b81
   subpackages:
-  - bcrypt
-  - blowfish
   - curve25519
   - ed25519
   - ed25519/internal/edwards25519
@@ -175,7 +173,10 @@ imports:
   - ssh/terminal
 - name: golang.org/x/net
   version: ab555f366c4508dbe0802550b1b20c46c5c18aa0
+  repo: https://github.com/golang/net.git
+  vcs: git
   subpackages:
+  - .
   - html
   - html/atom
   - html/charset
@@ -189,7 +190,10 @@ imports:
   - unix
 - name: golang.org/x/text
   version: e19ae1496984b1c655b8044a65c0300a3c878dd3
+  repo: https://github.com/golang/text.git
+  vcs: git
   subpackages:
+  - .
   - cases
   - encoding
   - encoding/charmap

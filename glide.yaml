@@ -56,31 +56,13 @@ import:
   version: 366b072768b4e6d93c7de236464c0abe85d0b7c6
 - package: k8s.io/client-go
   version: ~4.0.0
-- package: github.com/influxdata/influxdb/client/v2
-  version: d610a79487e2cee1d0fa8cdd3ec59d511c24f0dc
-- package: golang.org/x/net
-  version: ab555f366c4508dbe0802550b1b20c46c5c18aa0
-- package: golang.org/x/text
-  version: e19ae1496984b1c655b8044a65c0300a3c878dd3
-- package: golang.org/x/sys
-  version: 810d7000345868fc619eb81f46307107118f4ae1
-- package: github.com/onsi/gomega
-  version: dcabb60a477c2b6f456df65037cb6708210fbb02
-- package: github.com/onsi/ginkgo
-  version: 11459a886d9cd66b319dac7ef1e917ee221372c9
-- package: github.com/go-playground/locales
-  version: e4cbcb5d0652150d40ad0646651076b6bd2be4f6
-- package: gopkg.in/yaml.v2
-  version: d670f9405373e636a5a2765eea47fac0c9bc91a4
-- package: github.com/satori/uuid
-  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
-- package: github.com/dgrijalva/jwt-go
-  version: dbeaa9332f19a944acb5736b4456cfcc02140e29
-- package: github.com/kelseyhightower/envconfig
-  version: 462fda1f11d8cad3660e52737b8beefd27acfb3f
 testImport:
 # glide isn't able to mutually reconcile pinned versions of these deps
+- package: github.com/onsi/gomega
+- package: github.com/onsi/ginkgo
+- package: github.com/kelseyhightower/envconfig
 - package: k8s.io/apiserver
   version: 366b072768b4e6d93c7de236464c0abe85d0b7c6
 - package: k8s.io/client-go
   version: ~4.0.0
+- package: github.com/influxdata/influxdb/client/v2
