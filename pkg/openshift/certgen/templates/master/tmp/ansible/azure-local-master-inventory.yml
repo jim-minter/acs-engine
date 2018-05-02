@@ -15,7 +15,7 @@ localmaster:
 
     # NOTE: This changes in 3.10+ and it's all combined into a single variable
     #       under the name openshift_web_console_image_name
-    openshift_web_console_prefix: "IMAGE_PREFIX/"
+    openshift_web_console_prefix: "docker.io/jimminter/"
     openshift_web_console_image_name: "IMAGE_TYPE-web-console"
     openshift_web_console_version: "vVERSION"
 

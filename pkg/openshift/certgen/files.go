@@ -106,27 +106,41 @@ func (c *Config) WriteMasterFiles(fs filesystem.Filesystem) error {
 		}
 		tb := templates.MustAsset(name)
 
-		t, err := template.New("template").Funcs(template.FuncMap{
-			"QuoteMeta": regexp.QuoteMeta,
-			"Bcrypt": func(password string) (string, error) {
-				h, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-				return string(h), err
-			},
-		}).Parse(string(tb))
-		if err != nil {
-			return err
+		raw := map[string]struct{}{
+			"master/etc/origin/master/login.html":             struct{}{},
+			"master/etc/origin/master/providerSelection.html": struct{}{},
+			"master/etc/origin/master/error.html":             struct{}{},
 		}
 
 		b := &bytes.Buffer{}
-		err = t.Execute(b, c)
-		if err != nil {
-			return err
+		if _, ok := raw[name]; ok {
+			_, err := b.Write(tb)
+			if err != nil {
+				return err
+			}
+
+		} else {
+			t, err := template.New("template").Funcs(template.FuncMap{
+				"QuoteMeta": regexp.QuoteMeta,
+				"Bcrypt": func(password string) (string, error) {
+					h, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+					return string(h), err
+				},
+			}).Parse(string(tb))
+			if err != nil {
+				return err
+			}
+
+			err = t.Execute(b, c)
+			if err != nil {
+				return err
+			}
 		}
 
 		fname := strings.TrimPrefix(name, "master/")
 		fi := GetFileInfo(fname)
 
-		err = fs.WriteFile(fname, b.Bytes(), fi)
+		err := fs.WriteFile(fname, b.Bytes(), fi)
 		if err != nil {
 			return err
 		}

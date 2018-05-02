@@ -195,6 +195,10 @@ oauthConfig:
   tokenConfig:
     accessTokenMaxAgeSeconds: 86400
     authorizeTokenMaxAgeSeconds: 500
+  templates:
+    login: /etc/origin/master/login.html
+    providerSelection: /etc/origin/master/providerSelection.html
+    error: /etc/origin/master/error.html
 pauseControllers: false
 policyConfig:
   bootstrapPolicyFile: /etc/origin/master/policy.json
