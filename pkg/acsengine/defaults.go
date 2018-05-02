@@ -781,7 +781,7 @@ type writeFn func(filesystem.Filesystem) error
 func getConfigBundle(write writeFn) ([]byte, error) {
 	b := &bytes.Buffer{}
 
-	fs, err := filesystem.NewTGZFile(b)
+	fs, err := filesystem.NewTarXZFile(b)
 	if err != nil {
 		return nil, err
 	}

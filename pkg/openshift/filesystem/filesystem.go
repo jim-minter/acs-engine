@@ -2,10 +2,10 @@ package filesystem
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -71,29 +71,40 @@ func (filesystem) Close() error {
 	return nil
 }
 
-type tgzfile struct {
-	gz   *gzip.Writer
+type tarxzfile struct {
+	cmd  *exec.Cmd
+	wc   io.WriteCloser
 	tw   *tar.Writer
 	now  time.Time
 	dirs map[string]struct{}
 }
 
-var _ Filesystem = &tgzfile{}
+var _ Filesystem = &tarxzfile{}
 
-// NewTGZFile returns a Filesystem interface backed by a tar.gz file
-func NewTGZFile(w io.Writer) (Filesystem, error) {
-	gz := gzip.NewWriter(w)
-	tw := &tgzfile{
-		gz:   gz,
-		tw:   tar.NewWriter(gz),
+// NewTarXZFile returns a Filesystem interface backed by a tar.bz2 file
+func NewTarXZFile(w io.Writer) (Filesystem, error) {
+	cmd := exec.Command("xz")
+	wc, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stdout = w
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+	tf := &tarxzfile{
+		cmd:  cmd,
+		wc:   wc,
+		tw:   tar.NewWriter(wc),
 		now:  time.Now(),
 		dirs: map[string]struct{}{},
 	}
-	return tw, nil
+	return tf, nil
 }
 
 // Mkdir called directly and takes permissions/ownership
-func (t *tgzfile) Mkdir(name string, fileInfo Fileinfo) error {
+func (t *tarxzfile) Mkdir(name string, fileInfo Fileinfo) error {
 	if _, exists := t.dirs[name]; exists {
 		return &os.PathError{Op: "mkdir", Path: name}
 	}
@@ -116,7 +127,7 @@ func (t *tgzfile) Mkdir(name string, fileInfo Fileinfo) error {
 
 // mkdirAll creates all directories in a string delimited by '/'
 // this function does not chown/chgrp as that would require elevated privileges
-func (t *tgzfile) mkdirAll(name string) error {
+func (t *tarxzfile) mkdirAll(name string) error {
 	parts := strings.Split(name, "/")
 	for i := 1; i < len(parts); i++ {
 		name = filepath.Join(parts[:i]...)
@@ -132,7 +143,7 @@ func (t *tgzfile) mkdirAll(name string) error {
 	return nil
 }
 
-func (t *tgzfile) WriteFile(filename string, data []byte, fileInfo Fileinfo) error {
+func (t *tarxzfile) WriteFile(filename string, data []byte, fileInfo Fileinfo) error {
 	err := t.mkdirAll(filepath.Dir(filename))
 	if err != nil {
 		return err
@@ -155,10 +166,14 @@ func (t *tgzfile) WriteFile(filename string, data []byte, fileInfo Fileinfo) err
 	return err
 }
 
-func (t *tgzfile) Close() error {
+func (t *tarxzfile) Close() error {
 	err := t.tw.Close()
 	if err != nil {
 		return err
 	}
-	return t.gz.Close()
+	err = t.wc.Close()
+	if err != nil {
+		return err
+	}
+	return t.cmd.Wait()
 }
