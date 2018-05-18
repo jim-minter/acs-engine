@@ -46,6 +46,10 @@ iptables-save >/etc/sysconfig/iptables
 
 rm -rf /etc/etcd/* /etc/origin/master/*
 
+# TODO: this should not be in the image in the first place
+rm -f /etc/dnsmasq.d/node-dnsmasq.conf
+systemctl restart dnsmasq.service
+
 mkdir -p /etc/origin/master
 
 oc adm create-bootstrap-policy-file --filename=/etc/origin/master/policy.json
