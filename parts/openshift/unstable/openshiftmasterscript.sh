@@ -5,37 +5,21 @@
 
 if [ -f "/etc/sysconfig/atomic-openshift-node" ]; then
 	SERVICE_TYPE=atomic-openshift
-else
-	SERVICE_TYPE=origin
-fi
-VERSION="$(rpm -q $SERVICE_TYPE --queryformat %{VERSION})"
-IP_ADDRESS="{{ .MasterIP }}"
-
-if [ -f "/etc/sysconfig/atomic-openshift-node" ]; then
-	ANSIBLE_DEPLOY_TYPE="openshift-enterprise"
 	IMAGE_TYPE=ose
 	IMAGE_PREFIX="registry.access.redhat.com/openshift3"
-	ANSIBLE_CONTAINER_VERSION="v${VERSION}"
-	PROMETHEUS_EXPORTER_VERSION="v${VERSION}"
-	COCKPIT_PREFIX="${IMAGE_PREFIX}"
-	COCKPIT_BASENAME="registry-console"
-	COCKPIT_VERSION="v${VERSION}"
 else
-	ANSIBLE_DEPLOY_TYPE="origin"
-	IMAGE_TYPE="${SERVICE_TYPE}"
-	IMAGE_PREFIX="openshift"
-	# FIXME: These versions are set to deal with differences in how Origin and OCP
-	#        components are versioned
-	ANSIBLE_CONTAINER_VERSION="v${VERSION%.*}"
-	COCKPIT_PREFIX="cockpit"
-	COCKPIT_BASENAME="kubernetes"
-	COCKPIT_VERSION="latest"
+	SERVICE_TYPE=origin
+	IMAGE_TYPE=origin
+	IMAGE_PREFIX=openshift
 fi
 
 # TODO: with WALinuxAgent>=v2.2.21 (https://github.com/Azure/WALinuxAgent/pull/1005)
 # we should be able to append context=system_u:object_r:container_var_lib_t:s0
 # to ResourceDisk.MountOptions in /etc/waagent.conf and remove this stanza.
 systemctl stop docker.service
+umount /mnt/resource
+mkfs.xfs -f /dev/sdb1
+mount -o rw,relatime,seclabel,attr2,inode64,grpquota /dev/sdb1 /var/lib/docker
 restorecon -R /var/lib/docker
 systemctl start docker.service
 
@@ -77,30 +61,10 @@ set -x
 ###
 # retrieve the public ip via dns for the router public ip and sub it in for the routingConfig.subdomain
 ###
-routerLBHost="{{.RouterLBHostname}}"
+routerLBHost="{{ .RouterLBHostname }}"
 routerLBIP=$(dig +short $routerLBHost)
 
-# NOTE: The version of openshift-ansible for origin defaults the ansible var
-#       openshift_prometheus_node_exporter_image_version correctly as needed by
-#       origin, but for OCP it does not.
-#
-#       This is fixed in openshift/openshift-ansible@c27a0f4, which is in
-#       openshift-ansible >= 3.9.15, so once we're shipping OCP >= v3.9.15 we
-#       can remove this and the definition of the cooresonding variable in the
-#       ansible inventory file.
-if [[ "${ANSIBLE_DEPLOY_TYPE}" == "origin" ]]; then
-    sed -i "/PROMETHEUS_EXPORTER_VERSION/d" /tmp/ansible/azure-local-master-inventory.yml
-else
-    sed -i "s|PROMETHEUS_EXPORTER_VERSION|${PROMETHEUS_EXPORTER_VERSION}|g;" /tmp/ansible/azure-local-master-inventory.yml
-fi
-
-for i in /etc/origin/master/master-config.yaml /tmp/bootstrapconfigs/* /tmp/ansible/azure-local-master-inventory.yml; do
-    sed -i "s/TEMPROUTERIP/${routerLBIP}/; s|IMAGE_PREFIX|$IMAGE_PREFIX|g; s|ANSIBLE_DEPLOY_TYPE|$ANSIBLE_DEPLOY_TYPE|g" $i
-    sed -i "s|REGISTRY_STORAGE_AZURE_ACCOUNTNAME|${REGISTRY_STORAGE_AZURE_ACCOUNTNAME}|g; s|REGISTRY_STORAGE_AZURE_ACCOUNTKEY|${REGISTRY_STORAGE_AZURE_ACCOUNTKEY}|g" $i
-    sed -i "s|COCKPIT_VERSION|${COCKPIT_VERSION}|g; s|COCKPIT_BASENAME|${COCKPIT_BASENAME}|g; s|COCKPIT_PREFIX|${COCKPIT_PREFIX}|g;" $i
-    sed -i "s|VERSION|${VERSION}|g; s|SHORT_VER|${VERSION%.*}|g; s|SERVICE_TYPE|${SERVICE_TYPE}|g; s|IMAGE_TYPE|${IMAGE_TYPE}|g" $i
-    sed -i "s|HOSTNAME|${HOSTNAME}|g;" $i
-done
+sed -i "s/TEMPROUTERIP/$routerLBIP/; s|IMAGE_PREFIX|$IMAGE_PREFIX|g; s|IMAGE_TYPE|${IMAGE_TYPE}|g" /etc/origin/master/master-config.yaml
 
 mkdir -p /root/.kube
 
@@ -108,9 +72,8 @@ for loc in /root/.kube/config /etc/origin/node/bootstrap.kubeconfig /etc/origin/
   cp /etc/origin/master/admin.kubeconfig "$loc"
 done
 
-
 # Patch the etcd_ip address placed inside of the static pod definition from the node install
-sed -i "s/ETCD_IP_REPLACE/${IP_ADDRESS}/g" /etc/origin/node/disabled/etcd.yaml
+sed -i "s/ETCD_IP_REPLACE/{{ .MasterIP }}/g" /etc/origin/node/disabled/etcd.yaml
 
 export KUBECONFIG=/etc/origin/master/admin.kubeconfig
 
@@ -131,36 +94,34 @@ while ! oc get svc kubernetes &>/dev/null; do
 	sleep 1
 done
 
-oc create -f - <<'EOF'
-kind: StorageClass
-apiVersion: storage.k8s.io/v1beta1
-metadata:
-  name: azure
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "true"
-provisioner: kubernetes.io/azure-disk
-parameters:
-  skuName: Premium_LRS
-  location: {{ .Location }}
-  kind: managed
+cat >/tmp/rootconfig <<EOF
+CACert: $(base64 -w0 </etc/origin/master/ca.crt)
+CAKey: $(base64 -w0 </etc/origin/master/ca.key)
+DNSPrefix: {{ .DNSPrefix }}
+FrontProxyCACert: $(base64 -w0 </etc/origin/master/front-proxy-ca.crt)
+Location: {{ .Location }}
+MasterHostname: $(hostname)
+RegistryAccountKey: $REGISTRY_STORAGE_AZURE_ACCOUNTKEY
+RegistryStorageAccount: $REGISTRY_STORAGE_AZURE_ACCOUNTNAME
+RouterIP: $routerLBIP
+ServiceSignerCACert: $(base64 -w0 </etc/origin/master/service-signer.crt)
 EOF
 
-oc create configmap node-config-master --namespace openshift-node --from-file=node-config.yaml=/tmp/bootstrapconfigs/master-config.yaml
-oc create configmap node-config-compute --namespace openshift-node --from-file=node-config.yaml=/tmp/bootstrapconfigs/compute-config.yaml
-oc create configmap node-config-infra --namespace openshift-node --from-file=node-config.yaml=/tmp/bootstrapconfigs/infra-config.yaml
+oc create -f - <<'EOF'
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: openshift-impexp
+EOF
 
-chmod +x /tmp/ansible/ansible.sh
+oc create -f - <<EOF
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rootconfig
+  namespace: openshift-impexp
+data:
+$(sed -e 's/^/  /' /tmp/rootconfig)
+EOF
 
-docker run \
-	--rm \
-	-u "$(id -u)" \
-	-v /etc/origin:/etc/origin:z \
-	-v /tmp/ansible:/opt/app-root/src:z \
-	-v /root/.kube:/opt/app-root/src/.kube:z \
-	-w /opt/app-root/src \
-	-e IMAGE_BASE="${IMAGE_PREFIX}/${IMAGE_TYPE}" \
-	-e VERSION="$VERSION" \
-	-e HOSTNAME="$(hostname)" \
-	--network="host" \
-	"${IMAGE_PREFIX}/${IMAGE_TYPE}-ansible:${ANSIBLE_CONTAINER_VERSION}" \
-	/opt/app-root/src/ansible.sh
+docker run --dns=8.8.8.8 -i -v /root/.kube:/.kube:z -e KUBECONFIG=/.kube/config docker.io/jimminter/import:latest || true
